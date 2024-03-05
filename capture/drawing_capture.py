@@ -43,8 +43,8 @@ for stroke_nb in range(len(outputs)): # the stroke itself is a 'path' in the JSO
     ys = []
     for point_nb in range(len(stroke)):
         # Build list of xs and ys.
-        # For the first point of each stroke ('M') there is only one set of coords.
-        if stroke[point_nb][0] == 'M':
+        # For the first and last points of each stroke ('M' and 'L') there is only one set of coords.
+        if stroke[point_nb][0] == 'M' or stroke[point_nb][0] == 'L':
             xs.append(int(stroke[point_nb][1]))
             ys.append(int(stroke[point_nb][2]))
         # For the intermediary points of each stroke ('Q') there are two sets of coords.
@@ -54,10 +54,6 @@ for stroke_nb in range(len(outputs)): # the stroke itself is a 'path' in the JSO
             xs.append(int(stroke[point_nb][3]))
             ys.append(int(stroke[point_nb][2]))
             ys.append(int(stroke[point_nb][4]))
-        # For the last point of each stroke ('L') there is only one set of coords.
-        elif stroke[point_nb][0] == 'L':
-            xs.append(int(stroke[point_nb][1]))
-            ys.append(int(stroke[point_nb][2]))
     lst_strokes.append([xs, ys])
 
 dict_strokes = {'drawing': lst_strokes}
@@ -69,10 +65,12 @@ json_drawing = json.dumps(dict_strokes)
 st.text('JSON of the drawing:')
 st.json(json_drawing)
 
-# # Write the JSON to a file for testing (truncating coords lists to 101-length is only on streamlit)
-# if outputs is not None:
-#     with open('drawing_input_test3.json', 'w') as file:
-#         json.dump(json_drawing, file)
+# Write the dict to a JSON file for testing
+# Not writing json_drawing as this is a string
+# -- truncating coords lists to 101-length is only on streamlit --
+if outputs is not None:
+    with open('drawing_input_test3.json', 'w') as file:
+        json.dump(dict_strokes, file)
 
 # Show the end drawing
 if canvas_result.image_data is not None:
