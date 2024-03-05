@@ -2,7 +2,7 @@
 # pylint
 # ipdb
 # ipykernel
-# jupyter
+jupyter
 # jupyterlab
 
 numpy
