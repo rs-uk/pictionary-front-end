@@ -25,9 +25,12 @@ pandas
 # prefect==2.14.9
 
 # API
-# fastapi==0.108.0
+# fastapi==0.110.0
 # # pytz
 # uvicorn
+
+streamlit
+requests
 
 # Canvas input package
 streamlit-drawable-canvas

@@ -3,7 +3,7 @@ from PIL import Image
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 import json
-
+import requests
 
 # Create a canvas component
 canvas_result = st_canvas(
@@ -62,12 +62,6 @@ json_drawing = json.dumps(dict_strokes)
 st.text('JSON of the drawing:')
 st.json(json_drawing)
 
-# # Write the dict to a JSON file for testing
-# # Not writing json_drawing as this is a string
-# if outputs is not None:
-#     with open('drawing_input_test4.json', 'w') as file:
-#         json.dump(dict_strokes, file)
-
 # Show the end drawing in streamlit
 if canvas_result.image_data is not None:
     st.image(canvas_result.image_data)
@@ -99,10 +93,30 @@ def resampling_post(json_drawing: json, step: int = 5) -> json:
 # -- truncating coords lists to 101-length is only on streamlit display, tested by file-saving below --
 if outputs is not None:
     st.text('JSON of the resampled drawing:')
-    st.json(resampling_post(json_drawing))
-
+    st.json(resampling_post(json_drawing, step=10))
 
 
 # Resampling the live drawing, i.e. only the last stroke is being resampled
 def resampling_live(json_drawing: json, step: int = 5) -> json:
     pass # TODO on wednesday
+
+
+# Write the dict to a JSON file for testing
+# Not writing json_drawing as this is a string
+file_index = 5
+if outputs is not None:
+    with open(f"drawing_input_test{file_index}.json", 'w') as file:
+        json.dump(dict_strokes, file)
+    with open(f"drawing_input_resampled_post_test{file_index}.json", 'w') as file:
+        json.dump(json.loads(resampling_post(json_drawing)), file)
+
+
+
+
+
+# Pass the JSON resampled drawing to the API
+base_url = 'https://whatever-we-need.com'
+url = f"{base_url}/capture"
+
+upload = requests.post(url=url, data=json.loads(resampling_post(json_drawing)))
+upload.raise_for_status()
