@@ -4,11 +4,10 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 import json
 import requests
+from params import *
+import matplotlib.pyplot as plt
 
 
-################################################################################
-########################### Generate a JSON drawing ############################
-################################################################################
 # Create a canvas component
 canvas_result = st_canvas(
     fill_color="rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
@@ -21,18 +20,23 @@ canvas_result = st_canvas(
     width=600,
     drawing_mode='freedraw', # we only want that option from st_canvas
     point_display_radius=0, # we only care about freedraw mode here
-    key="canvas",
+    key="canvas"
 )
+
+
 # Show the outputs on streamlit
 if canvas_result.json_data is not None:
-    # update_drawing()
     # need to convert obj to str because of PyArrow
     objects = pd.json_normalize(canvas_result.json_data["objects"])
     for col in objects.select_dtypes(include=['object']).columns:
         objects[col] = objects[col].astype("str")
     # st.dataframe(objects)
+
+
 # Show the resulting JSON on streamlit
 # st.json(canvas_result.json_data['objects'])
+
+
 # Extract the drawing and process to match the expected format
 outputs = canvas_result.json_data['objects']
 lst_strokes = []
@@ -58,12 +62,9 @@ for stroke in outputs:
 dict_strokes = {'drawing': lst_strokes}
 # Convert the dict to JSON
 json_drawing = json.dumps(dict_strokes)
-################################################################################
 
 
-################################################################################
-######## Resampling the end drawing (all strokes at once) based on time ########
-################################################################################
+# Resampling the drawing (all strokes) based on time
 def resampling_time_post(json_drawing: json, step: int = 5) -> dict:
     lst_strokes = json.loads(json_drawing)['drawing']
     lst_strokes_resampled = []
@@ -74,46 +75,37 @@ def resampling_time_post(json_drawing: json, step: int = 5) -> dict:
         lst_strokes_resampled.append(stroke_resampled)
     dict_strokes_resampled = {'drawing': lst_strokes_resampled}
     return dict_strokes_resampled
-################################################################################
 
 
-################################################################################
-################## Pass the JSON resampled drawing to the API ##################
-################################################################################
-# base_url = 'https://pictionary-ai-1561.com'
-base_url = "http://127.0.0.1:8000"
-url = f"{base_url}/api"
-
-# def update_drawing():
-#     upload = requests.post(url, json=json.loads(resampling_time_post(json_drawing)))
-#     st.text(upload.json())
-################################################################################
-
-upload = requests.post(url, json=resampling_time_post(json_drawing)
+# Pass the JSON resampled drawing to the API
+api_url = f"{base_url}/api"
+upload = requests.post(api_url, json=resampling_time_post(json_drawing)
                         ,headers={'Content-Type':'application/json'})
 st.write(upload.content)
 
-################################################################################
-###################### Show the JSON drawing in streamlit ######################
-################################################################################
-# truncating coords lists to 101-length is only on streamlit display, tested by
-# file-saving below
+
+# Show the JSON drawing in streamlit (truncating coords lists to 101-length is
+# only on streamlit display, tested by file-saving below)
 # st.text('JSON of the drawing:')
 # st.json(json_drawing)
-################################################################################
 
 
-################################################################################
-###################### Show the end drawing in streamlit #######################
-################################################################################
+# Write the dict to a JSON file for testing
+# Not writing json_drawing as this is a string
+# file_index = 5
+# if outputs is not None:
+#     with open(f"drawing_input_test{file_index}.json", 'w') as file:
+#         json.dump(dict_strokes, file)
+#     with open(f"drawing_input_resampled_post_test{file_index}.json", 'w') as file:
+#         json.dump(json.loads(resampling_time_post(json_drawing)), file)
+
+
+# Show the end drawing in streamlit
 # if canvas_result.image_data is not None:
 #     st.image(canvas_result.image_data)
-################################################################################
 
 
-################################################################################
-###### Resampling the end drawing (all strokes at once) based on distance ######
-################################################################################
+# Resampling the drawing (all strokes) based on distance
 # def resampling_distance_post(json_drawing: json, step: int = 5) -> json:
 #     lst_strokes = json.loads(json_drawing)['drawing']
 #     lst_strokes_resampled = []
@@ -136,36 +128,35 @@ st.write(upload.content)
 #         lst_strokes_resampled.append(stroke_resampled)
 #     dict_strokes_resampled = {'drawing': lst_strokes_resampled}
 #     return json.dumps(dict_strokes_resampled)
-################################################################################
 
 
-
-
-################################################################################
-################# Show the JSON resampled drawing in streamlit #################
-################################################################################
-# truncating coords lists to 101-length is only on streamlit display, tested by
-# file-saving below
+# Show the JSON resampled drawing in streamlit (truncating coords lists to 101-length
+# is only on streamlit display, tested by file-saving below)
 if outputs is not None:
     st.text('JSON of the resampled drawing:')
-    st.json(resampling_time_post(json_drawing, step=10))
-################################################################################
+    st.json(resampling_time_post(json_drawing, step=resampling_time_step))
 
 
-################################################################################
-######## Resampling the live drawing (for each new point) based on time ########
-################################################################################
+# Show the resampled drawing in streamlit
+# Create the figure and flip the y axis (drawings captured from top-left corner)
+plt_drawing_resampled = plt.figure(figsize=(8, 6))
+plt.gca().invert_yaxis()
+plt.axis('off')
+# Grab the resampled drawing's JSON
+json_drawing = resampling_time_post(json_drawing, step=resampling_time_step)
+# Iterate through the strokes and add segments to the figure
+for stroke in json_drawing['drawing']:
+    xs = stroke[0]
+    ys = stroke[1]
+    # Connect the points with lines
+    for i in range(len(xs) - 1):
+        plt.plot([xs[i], xs[i + 1]], [ys[i], ys[i + 1]], color='black')
+# Display in streamlit
+if outputs is not None:
+    st.text('Resampled drawing:')
+    st.pyplot(plt_drawing_resampled)
+
+
+# Resampling the live drawing (for each new point) based on time
 def resampling_time_live(json_drawing: json, step: int = 5) -> json:
     pass # TODO
-################################################################################
-
-
-
-# Write the dict to a JSON file for testing
-# Not writing json_drawing as this is a string
-# file_index = 5
-# if outputs is not None:
-#     with open(f"drawing_input_test{file_index}.json", 'w') as file:
-#         json.dump(dict_strokes, file)
-#     with open(f"drawing_input_resampled_post_test{file_index}.json", 'w') as file:
-#         json.dump(json.loads(resampling_time_post(json_drawing)), file)
