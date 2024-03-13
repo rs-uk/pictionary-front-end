@@ -1,29 +1,86 @@
 import streamlit as st
-import time
 from streamlit_extras.add_vertical_space import add_vertical_space
-from streamlit_extras.let_it_rain import rain
+from streamlit_drawable_canvas import st_canvas
 import requests
 import random
-
 import pandas as pd
-from PIL import Image
-import streamlit as st
-from streamlit_drawable_canvas import st_canvas
 import json
 import requests
-import numpy as np
-
-
-# from params import *
-
-import matplotlib.pyplot as plt
 import random
+import base64
+from gtts import gTTS
+import io
 
 st.set_page_config(
             page_title="Game", # => Quick reference - Streamlit
             page_icon=":pencil:",
             layout="centered", # wide
             initial_sidebar_state="auto")
+
+def autoplay_audio(audio):
+    '''Function Purpose:
+            The autoplay_audio function is designed to create an HTML audio player that plays audio automatically
+            without requiring manual interaction (i.e., clicking the “play” button).
+            It takes an audio bytes object as input.
+        Function Implementation:
+            data = audio.read(): Reads the audio bytes from the input audio object.
+            b64 = base64.b64encode(data).decode(): Encodes the audio data using base64 encoding.
+            md: Constructs an HTML snippet for the audio player.
+            The <audio> tag includes the controls attribute (which displays audio controls like play, pause, and volume)
+            and the autoplay="true" attribute (which ensures automatic playback).
+            The src attribute specifies the audio source as a base64-encoded data URI.
+            The type attribute indicates that the audio is in MP3 format.
+            st.markdown(md, unsafe_allow_html=True): Displays the HTML snippet within the Streamlit app.
+        Usage:
+            You can call this function with an audio bytes object (e.g., generated using gTTS).
+            It will render an audio player in your Streamlit app that plays the audio automatically.
+    '''
+    data = audio.read()
+    b64 = base64.b64encode(data).decode()
+    md = f"""
+    <audio controls autoplay="true">
+    <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
+    </audio>
+    """
+    st.markdown(
+        md,
+        unsafe_allow_html=True,
+        )
+
+def tts(word):
+    '''
+    Function Purpose:
+        The tts function is designed to create a simple Streamlit app for text-to-speech (TTS) conversion.
+        It allows the user to input a word or text, converts it to audio using gTTS, and plays it automatically.
+    Function Implementation:
+        st.title("Automatic Text-to-Speech Demo"): Sets the title of the Streamlit app.
+        user_input = st.text_input("Enter a word:"): Creates a text input field where the user can enter a word or text.
+        if user_input:: Checks if the user input is not empty and execure inner function play_word().
+        tts = gTTS(text=user_input, lang="en", slow=False): Creates a gTTS object with the user input text and English language.
+        audio_bytes = io.BytesIO(): Initializes an in-memory byte stream to store the audio data.
+        tts.write_to_fp(audio_bytes): Writes the audio data to the byte stream.
+        audio_bytes.seek(0): Resets the stream position to the beginning.
+        autoplay_audio(audio_bytes): Calls the autoplay_audio function with the audio bytes.
+    Usage:
+        The user enters a word or text in the input field.
+        The gTTS library converts the input to audio and stores it in the audio_bytes object.
+        The autoplay_audio function plays the audio automatically.
+    '''
+
+    def play_word(user_input):
+        tts = gTTS(text=user_input, lang="es", tld="es", slow=False)
+        audio_bytes = io.BytesIO()
+        tts.write_to_fp(audio_bytes)
+        #st.audio(audio_bytes, format="audio/mp3", start_time=0)
+        audio_bytes.seek(0)
+        autoplay_audio(audio_bytes)
+
+    play_word(word)
+
+    # user_input = word
+
+    # if user_input:
+    #     play_word(user_input)
 
 # Resampling the drawing (all strokes) based on time
 def resampling_time_post(json_drawing: json, step: int = 1) -> dict:
@@ -37,12 +94,10 @@ def resampling_time_post(json_drawing: json, step: int = 1) -> dict:
     dict_strokes_resampled = {'drawing': lst_strokes_resampled}
     return dict_strokes_resampled
 
-
 st.title('Pictionary :blue[AI] :pencil:')
 
 st.markdown("We will randomly choose one out of 50 images for you to draw in 20 seconds...")
 add_vertical_space(3)
-
 
 dictionary = {"aircraft carrier": 0, "arm": 1, "asparagus": 2, "backpack": 3,
               "banana": 4, "basketball": 5, "bottlecap": 6, "bread": 7, "broom": 8,
@@ -55,9 +110,6 @@ dictionary = {"aircraft carrier": 0, "arm": 1, "asparagus": 2, "backpack": 3,
               "spider": 39, "square": 40, "steak": 41, "swing set": 42, "sword": 43,
               "telephone": 44, "television": 45, "tooth": 46, "traffic light": 47, "trumpet": 48, "violin": 49}
 reversed_dict = {v: k for k, v in dictionary.items()}
-#reversing dictionary
-
-#this will give a random class
 
 if 'random_class' not in st.session_state:
     random_class = random.choice(list(reversed_dict.values()))
@@ -66,7 +118,7 @@ if 'random_class' not in st.session_state:
 else:
     random_class = st.session_state['random_class']
 
-st.header(f"Please draw a {random_class}")
+st.header(f"Please draw {random_class}")
 
 def countdown_with_progress():
 
@@ -90,7 +142,6 @@ def countdown_with_progress():
             objects[col] = objects[col].astype("str")
         # st.dataframe(objects)
     # Show the resulting JSON on streamlit
-    #st.json(canvas_result.json_data['objects'])
     # Extract the drawing and process to match the expected format
     outputs = canvas_result.json_data['objects']
     lst_strokes = []
@@ -122,9 +173,6 @@ def countdown_with_progress():
 
 json_drawing = countdown_with_progress()
 
-
-# st.write(json_drawing)
-
 def another_game():
     col1, col2, col3 = st.columns(3)
 
@@ -132,15 +180,12 @@ def another_game():
     col2.button("   Click here to play again")
     col3.write("")  # Empty column
 
-
 #trying to add in prediction
 predict_url = "http://localhost:8080/predict"
 
 post_dict = resampling_time_post(json_drawing)
 
 if len(json_drawing) > 15:
-
-    # st.write("You drew a line")
 
     res = requests.post(url=predict_url, json=post_dict, headers={'Content-Type':'application/json'})
     #this request returns a dictionary with the array of percentages and the hgihest class
@@ -151,8 +196,7 @@ if len(json_drawing) > 15:
 
     if class_pred != random_class:
         st.write(reversed_dict[int(eval(res.decode())['prediction'])])
-        st.write((eval(res.decode())['prob']))
-        st.write(eval(res.decode())['probabilities'])
+        tts(reversed_dict[int(eval(res.decode())['prediction'])])
         st.write("You made a wrong prediction, keep drawing")
     else: # do we wnat
         st.write(reversed_dict[int(eval(res.decode())['prediction'])])
