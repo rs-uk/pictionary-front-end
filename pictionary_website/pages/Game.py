@@ -82,17 +82,94 @@ def tts(word):
     # if user_input:
     #     play_word(user_input)
 
-# Resampling the drawing (all strokes) based on time
-def resampling_time_post(json_drawing: json, step: int = 1) -> dict:
-    lst_strokes = json.loads(json_drawing)['drawing']
-    lst_strokes_resampled = []
-    for stroke in lst_strokes:
-        stroke_resampled = []
-        stroke_resampled.append(stroke[0][::step]) # resampled xs
-        stroke_resampled.append(stroke[1][::step]) # resampled ys
-        lst_strokes_resampled.append(stroke_resampled)
-    dict_strokes_resampled = {'drawing': lst_strokes_resampled}
+# # Resampling the drawing (all strokes) based on time
+# def resampling_time_post(json_drawing: json, step: int = 1) -> dict:
+#     lst_strokes = json.loads(json_drawing)['drawing']
+#     lst_strokes_resampled = []
+#     for stroke in lst_strokes:
+#         stroke_resampled = []
+#         stroke_resampled.append(stroke[0][::step]) # resampled xs
+#         stroke_resampled.append(stroke[1][::step]) # resampled ys
+#         lst_strokes_resampled.append(stroke_resampled)
+#     dict_strokes_resampled = {'drawing': lst_strokes_resampled}
+#     return dict_strokes_resampled
+
+
+######################################################
+#### Resampling the raw data using method provided on kaggle
+#### https://www.kaggle.com/code/inversion/getting-started-viewing-quick-draw-doodles-etc?scriptVersionId=6015273&cellId=11
+######################################################
+
+def resample(x, y, spacing=1.0):
+    output = []
+    n = len(x)
+    px = x[0]
+    py = y[0]
+    cumlen = 0
+    pcumlen = 0
+    offset = 0
+    for i in range(1, n):
+        cx = x[i]
+        cy = y[i]
+        dx = cx - px
+        dy = cy - py
+        curlen = math.sqrt(dx*dx + dy*dy)
+        cumlen += curlen
+        while offset < cumlen:
+            t = (offset - pcumlen) / curlen
+            invt = 1 - t
+            tx = px * invt + cx * t
+            ty = py * invt + cy * t
+            output.append((tx, ty))
+            offset += spacing
+        pcumlen = cumlen
+        px = cx
+        py = cy
+    output.append((x[-1], y[-1]))
+    return output
+
+'''
+###### !!THIS IS A MASSIVE QUACK!! ######
+# Function name should be 'normalize_resample_simplify' - using old function name to ensure comptability
+'''
+def resampling_time_post(json_drawing: json, epsilon=1.0, resample_spacing=1.0):
+    strokes = json.loads(json_drawing)['drawing']
+
+    if len(strokes) == 0:
+        raise ValueError('empty image')
+
+    # find min and max
+    amin = None
+    amax = None
+    for x, y in strokes:
+        cur_min = [np.min(x), np.min(y)]
+        cur_max = [np.max(x), np.max(y)]
+        amin = cur_min if amin is None else np.min([amin, cur_min], axis=0)
+        amax = cur_max if amax is None else np.max([amax, cur_max], axis=0)
+
+    # drop any drawings that are linear along one axis
+    arange = np.array(amax) - np.array(amin)
+    if np.min(arange) == 0:
+        raise ValueError('bad range of values')
+
+    arange = np.max(arange)
+    output = []
+    for x, y in strokes:
+        xy = np.array([x, y], dtype=float).T
+        xy -= amin
+        xy *= 255.
+        xy /= arange
+        resampled = resample(xy[:, 0], xy[:, 1], resample_spacing)
+        simplified = simplify_coords(resampled, epsilon)
+        xy = np.around(simplified).astype(np.uint8)
+        output.append(xy.T.tolist())
+
+    dict_strokes_resampled = {'drawing': output}
     return dict_strokes_resampled
+
+######################################################
+######################################################
+
 
 st.title('Pictionary :blue[AI] :pencil:')
 
