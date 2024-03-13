@@ -10,6 +10,9 @@ import random
 import base64
 from gtts import gTTS
 import io
+import math
+from simplification.cutil import simplify_coords
+import numpy as np
 
 st.set_page_config(
             page_title="Game", # => Quick reference - Streamlit
