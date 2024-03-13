@@ -24,7 +24,7 @@ add_vertical_space(3) #formatting
 col1, col2, col3 = st.columns(3)
 
 col1.write("")  # Empty column
-col2.link_button(":blue[Click here to play the game]", "http://localhost:8501/Game")  # Link button in the middle
+col2.link_button(":blue[Click here to play the game]", "https://pictionary-ai-frontend.streamlit.app/Game")  # Link button in the middle
 col3.write("")  # Empty column
 
 add_vertical_space(3) #formatting
