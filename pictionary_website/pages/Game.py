@@ -13,6 +13,7 @@ import io
 import math
 from simplification.cutil import simplify_coords
 import numpy as np
+import os
 
 st.set_page_config(
             page_title="Game", # => Quick reference - Streamlit
@@ -131,10 +132,10 @@ def resample(x, y, spacing=1.0):
     output.append((x[-1], y[-1]))
     return output
 
-'''
-###### !!THIS IS A MASSIVE QUACK!! ######
-# Function name should be 'normalize_resample_simplify' - using old function name to ensure comptability
-'''
+# '''
+# ###### !!THIS IS A MASSIVE QUACK!! ######
+# # Function name should be 'normalize_resample_simplify' - using old function name to ensure comptability
+# '''
 def resampling_time_post(json_drawing: json, epsilon=1.0, resample_spacing=1.0):
     strokes = json.loads(json_drawing)['drawing']
 
@@ -176,7 +177,7 @@ def resampling_time_post(json_drawing: json, epsilon=1.0, resample_spacing=1.0):
 
 st.title('Pictionary :blue[AI] :pencil:')
 
-st.markdown("We will randomly choose one out of 50 images for you to draw in 20 seconds...")
+st.markdown("We will randomly choose one out of 50 images for you to draw...")
 add_vertical_space(3)
 
 dictionary = {"aircraft carrier": 0, "arm": 1, "asparagus": 2, "backpack": 3,
@@ -189,6 +190,7 @@ dictionary = {"aircraft carrier": 0, "arm": 1, "asparagus": 2, "backpack": 3,
               "passport": 34, "pliers": 35, "potato": 36, "sea turtle": 37, "snowflake": 38,
               "spider": 39, "square": 40, "steak": 41, "swing set": 42, "sword": 43,
               "telephone": 44, "television": 45, "tooth": 46, "traffic light": 47, "trumpet": 48, "violin": 49}
+
 reversed_dict = {v: k for k, v in dictionary.items()}
 
 if 'random_class' not in st.session_state:
@@ -198,7 +200,8 @@ if 'random_class' not in st.session_state:
 else:
     random_class = st.session_state['random_class']
 
-st.header(f"Please draw {random_class}")
+st.header(f"The category this round is:")
+st.header(f"{random_class.capitalize()}")
 
 def countdown_with_progress():
 
@@ -261,9 +264,13 @@ def another_game():
     col3.write("")  # Empty column
 
 #trying to add in prediction
-predict_url = "http://localhost:8080/predict"
+predict_url = "https://pictionary-ai-7yfni3vqyq-uc.a.run.app/predict"
 
-post_dict = resampling_time_post(json_drawing)
+if len(json_drawing) > 15:
+    post_dict = resampling_time_post(json_drawing)
+
+if 'refresh' not in st.session_state:
+    st.session_state.refresh = 0
 
 if len(json_drawing) > 15:
 
@@ -275,14 +282,14 @@ if len(json_drawing) > 15:
     class_pred = reversed_dict[int(eval(res.decode())['prediction'])]
 
     if class_pred != random_class:
-        st.write(reversed_dict[int(eval(res.decode())['prediction'])])
+        st.header(f"My guess is {class_pred}")
         tts(reversed_dict[int(eval(res.decode())['prediction'])])
         st.write("You made a wrong prediction, keep drawing")
     else: # do we wnat
-        st.write(reversed_dict[int(eval(res.decode())['prediction'])])
-        st.write("You got it!")
-
-add_vertical_space(10)
-
-image1 = 'https://storage.googleapis.com/pictionary-ai-website-bucket/preview.jpg'
-st.image(image1, width=710)
+        st.balloons()
+        st.header(f"My guess is {class_pred}")
+        add_vertical_space(5)
+        st.write(f"""You made the correct prediction, well done! Here are some example
+                {class_pred} from the QuickDraw dataset:""")
+        add_vertical_space(5)
+        st.image(f"pngs/{class_pred}.png")
