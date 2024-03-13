@@ -5,3 +5,7 @@ requests
 streamlit-drawable-canvas
 streamlit-extras
 gTTs
+
+# For resampling
+simplification
+math
