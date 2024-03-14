@@ -177,9 +177,6 @@ def resampling_time_post(json_drawing: json, epsilon=1.0, resample_spacing=1.0):
 
 st.title('Pictionary :blue[AI] :pencil:')
 
-st.markdown("We will randomly choose one out of 50 images for you to draw...")
-add_vertical_space(3)
-
 dictionary = {"aircraft carrier": 0, "arm": 1, "asparagus": 2, "backpack": 3,
               "banana": 4, "basketball": 5, "bottlecap": 6, "bread": 7, "broom": 8,
               "bulldozer": 9, "butterfly": 10, "camel": 11, "canoe": 12, "chair": 13,
@@ -199,9 +196,6 @@ if 'random_class' not in st.session_state:
 
 else:
     random_class = st.session_state['random_class']
-
-st.header(f"The category this round is:")
-st.header(f"{random_class.capitalize()}")
 
 def countdown_with_progress():
 
@@ -254,14 +248,11 @@ def countdown_with_progress():
 
     return json_drawing
 
-json_drawing = countdown_with_progress()
+main_col1, main_col2 = st.columns(2)
 
-def another_game():
-    col1, col2, col3 = st.columns(3)
-
-    col1.write("")  # Empty column
-    col2.button("   Click here to play again")
-    col3.write("")  # Empty column
+with main_col1:
+    st.header(f"Draw: {random_class.capitalize()}")
+    json_drawing = countdown_with_progress()
 
 #trying to add in prediction
 predict_url = "https://pictionary-ai-7yfni3vqyq-uc.a.run.app/predict"
@@ -272,24 +263,50 @@ if len(json_drawing) > 15:
 if 'refresh' not in st.session_state:
     st.session_state.refresh = 0
 
-if len(json_drawing) > 15:
+if 'canvas_key' not in st.session_state:
+    st.session_state.canvas_key = 0
 
-    res = requests.post(url=predict_url, json=post_dict, headers={'Content-Type':'application/json'})
-    #this request returns a dictionary with the array of percentages and the hgihest class
-    res = res.content
+with main_col2:
+    if len(json_drawing) > 15:
 
-#this is the predicted class
-    class_pred = reversed_dict[int(eval(res.decode())['prediction'])]
+        res = requests.post(url=predict_url, json=post_dict, headers={'Content-Type':'application/json'})
+        #this request returns a dictionary with the array of percentages and the hgihest class
+        res = res.content
 
-    if class_pred != random_class:
-        st.header(f"My guess is {class_pred}")
-        tts(reversed_dict[int(eval(res.decode())['prediction'])])
-        st.write("You made a wrong prediction, keep drawing")
-    else: # do we wnat
-        st.balloons()
-        st.header(f"My guess is {class_pred}")
-        add_vertical_space(5)
-        st.write(f"""You made the correct prediction, well done! Here are some example
-                {class_pred} from the QuickDraw dataset:""")
-        add_vertical_space(5)
-        st.image(f"pngs/{class_pred}.png")
+    #this is the predicted class
+        class_pred = reversed_dict[int(eval(res.decode())['prediction'])]
+        class_pred_index = int(eval(res.decode())['prediction'])
+        results = eval(eval(res.decode())['result'].replace(" ", ", "))
+        class_pred_prob = results[int(class_pred_index)]
+
+        test_df = pd.DataFrame({'Category':list(dictionary.keys())
+                                , 'Probability':results}).sort_values(by='Probability'
+                                                            , ascending=False).reset_index(drop=True).head(5)
+        test_df.index = [1,2,3,4,5]
+        test_df = test_df[test_df['Probability'] > 0.05]
+
+        if class_pred != random_class:
+            st.header(f"AI guess: {class_pred}")
+            st.write(f"Probability = {class_pred_prob:.2f}")
+            st.write("Top predictions: (>5%)")
+            st.dataframe(test_df)
+            # tts(reversed_dict[int(eval(res.decode())['prediction'])])
+            st.write("The prediction is wrong, keep drawing")
+        elif class_pred == random_class and class_pred_prob > 0.9: # do we wnat
+            st.balloons()
+            st.header(f"AI guess: {class_pred}. Correct!")
+            st.write(f"Probability = {class_pred_prob:.2f}")
+            st.write("Top predictions: (>5%)")
+            st.dataframe(test_df)
+
+if len(json_drawing) > 15 and class_pred == random_class and class_pred_prob > 0.9:
+    if st.button("Play Again"):
+        # Reset the random class for a new game
+        st.session_state['random_class'] = random.choice(list(reversed_dict.values()))
+        # Increment canvas key to reset the canvas
+        st.session_state.canvas_key += 1
+        # Refresh the app to apply changes
+        st.experimental_rerun()
+    st.write(f"Here are some samples of class '{class_pred}' from the QuickDraw dataset:")
+    add_vertical_space(2)
+    st.image(f"pngs/{class_pred}.png")
