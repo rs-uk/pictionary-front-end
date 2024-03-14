@@ -286,7 +286,7 @@ with main_col2:
         test_df = test_df[test_df['Probability'] > 0.05]
 
         if class_pred != random_class:
-            st.header(f"AI guess: {class_pred}")
+            st.header(f"AI guess: {class_pred.capitalize()}")
             st.write(f"Probability = {class_pred_prob:.2f}")
             st.write("Top predictions: (>5%)")
             st.dataframe(test_df)
@@ -294,7 +294,7 @@ with main_col2:
             st.write("The prediction is wrong, keep drawing")
         elif class_pred == random_class and class_pred_prob > 0.9: # do we wnat
             st.balloons()
-            st.header(f"AI guess: {class_pred}. Correct!")
+            st.header(f"AI guess: {class_pred.capitalize()}. Correct!")
             st.write(f"Probability = {class_pred_prob:.2f}")
             st.write("Top predictions: (>5%)")
             st.dataframe(test_df)
