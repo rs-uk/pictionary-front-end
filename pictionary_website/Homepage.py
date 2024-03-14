@@ -18,7 +18,7 @@ st.markdown("<h1 style='text-align: center; font-weight: normal;font-size: 22px;
 st.markdown("<h1 style='text-align: center; font-weight: normal; font-size: 14px;'>You have 20 seconds to draw whatever image we give to you. After that we will test it to see if your drawing is good     enough for the AI model to match it to the image.</h1>"
 , unsafe_allow_html=True)
 
-how_to_img = "https://storage.googleapis.com/pictionary-ai-website-bucket/Screenshot%202024-03-14%20at%2012.42.34%20pm.png"
+how_to_img = "https://storage.googleapis.com/pictionary-ai-website-bucket/Screenshot%202024-03-14%20at%204.50.04%20pm.png"
 st.image(how_to_img, use_column_width=True)
 
 add_vertical_space(3) #formatting
